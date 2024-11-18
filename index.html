@@ -2,19 +2,166 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
-  <title>QR Code Scanner PWA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>QR Code Scanner with Bootstrap</title>
+  <!-- Include Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .camera-container, .canvas-container {
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 15px;
+    }
+
+    video, canvas {
+      width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .output-container {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 500px;
+      display: none; /* Initially hidden */
+    }
+
+    .output-container h3 {
+      color: #007BFF;
+    }
+
+    .status-paid {
+      color: green;
+      font-weight: bold;
+    }
+
+    .status-unpaid {
+      color: red;
+      font-weight: bold;
+    }
+
+    .btn-primary {
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <h1>QR Code Scanner</h1>
-    <button id="start-scan" class="btn">Start Scanning</button>
-    <video id="video" autoplay hidden></video>
-    <canvas id="canvas" hidden></canvas>
-    <div id="result" class="hidden"></div>
+  <div class="camera-container" id="camera-container">
+    <video id="video" autoplay playsinline></video>
   </div>
-  <script src="app.js"></script>
+  <div class="canvas-container" style="display:none;">
+    <canvas id="canvas"></canvas>
+  </div>
+  <div id="output" class="output-container"></div>
+  <button id="restart-button" class="btn btn-primary" style="display:none;" onclick="startScanner()">Restart Scanner</button>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const output = document.getElementById('output');
+    const restartButton = document.getElementById('restart-button');
+    const cameraContainer = document.getElementById('camera-container');
+    const canvasContext = canvas.getContext('2d');
+
+    // Start the QR code scanner
+    async function startScanner() {
+      output.style.display = "none";
+      restartButton.style.display = "none";
+      cameraContainer.style.display = "block";
+      output.innerHTML = "";
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+
+        video.addEventListener('loadedmetadata', () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        });
+
+        scan();
+      } catch (error) {
+        output.style.display = "block";
+        output.innerHTML = `<div class="alert alert-danger">Camera access denied or not supported.</div>`;
+        console.error(error);
+      }
+    }
+
+    // Scan the QR code
+    function scan() {
+      const interval = setInterval(() => {
+        canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+        try {
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) {
+            clearInterval(interval);
+            video.srcObject.getTracks().forEach(track => track.stop()); // Stop the camera
+            fetchData(code.data);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }, 500); // Scan every 500ms
+    }
+
+    // Fetch data from the API and display it
+    async function fetchData(qrCodeData) {
+      try {
+        alert(qrCodeData)
+        const response = await fetch(qrCodeData); // Replace with your API endpoint
+        const data = (await response.json())[0];
+     
+        const paymentStatus = data.payment_status === 1 ? 
+          '<span class="status-paid">Paid</span>' : 
+          '<span class="status-unpaid">Unpaid</span>';
+
+        cameraContainer.style.display = "none"; // Hide the scanner
+        output.style.display = "block"; // Show the data
+        restartButton.style.display = "block"; // Show restart button
+
+        output.innerHTML = `
+          <h3>MTSE Participant Data</h3>
+          <ul class="list-group">
+            <li class="list-group-item"><strong>Name:</strong> ${data.name}</li>
+            <li class="list-group-item"><strong>Gender:</strong> ${data.gender}</li>
+            <li class="list-group-item"><strong>Class:</strong> ${data.class}</li>
+            <li class="list-group-item"><strong>School:</strong> ${data.school_name}</li>
+            <li class="list-group-item"><strong>Contact:</strong> ${data.contact_number}</li>
+            <li class="list-group-item"><strong>WhatsApp:</strong> ${data.whatsapp_number}</li>
+            <li class="list-group-item"><strong>Email:</strong> ${data.email}</li>
+            <li class="list-group-item"><strong>Order ID:</strong> ${data.order_id}</li>
+            <li class="list-group-item"><strong>Payment Status:</strong> ${paymentStatus}</li>
+          </ul>
+        `;
+      } catch (error) {
+        output.style.display = "block";
+        output.innerHTML = `<div class="alert alert-danger">Failed to fetch data. Please try again. ${error}</div>`;
+        console.error(error);
+      }
+    }
+
+    // Initialize scanner on page load
+    startScanner();
+  </script>
+
+  <!-- Include jsQR library -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <!-- Include Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

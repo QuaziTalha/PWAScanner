@@ -29,4 +29,23 @@ body {
   .hidden {
     display: none;
   }
-  
+  /* Add this to your CSS */
+.camera-container, .canvas-container {
+  position: relative;
+  width: 100%; /* Take the full width of the parent */
+  max-width: 100%; /* Prevent overflow */
+  height: auto; /* Maintain aspect ratio */
+  overflow: hidden; /* Clip any content going outside */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+video, canvas {
+  width: 100%; /* Make video and canvas responsive */
+  height: auto; /* Keep aspect ratio */
+  max-width: 100%; /* Prevent them from exceeding parent container */
+  object-fit: cover; /* Scale the video appropriately */
+  border: 1px solid #ccc; /* Optional: Add a border for visibility */
+  border-radius: 8px; /* Optional: Rounded corners */
+}
