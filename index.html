@@ -59,6 +59,7 @@
   </style>
 </head>
 <body>
+  <img src="./Logo.png" style="width: 100px;"/>
   <div class="camera-container" id="camera-container">
     <video id="video" autoplay playsinline></video>
   </div>
@@ -122,7 +123,7 @@
     // Fetch data from the API and display it
     async function fetchData(qrCodeData) {
       try {
-        alert(qrCodeData)
+       
         const response = await fetch(qrCodeData); // Replace with your API endpoint
         const data = (await response.json())[0];
      
